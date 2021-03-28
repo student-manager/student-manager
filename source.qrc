@@ -1,0 +1,9 @@
+<RCC>
+  <qresource prefix="icon">
+    <file>sources/settings.png</file>
+    <file>sources/icon.png</file>
+  </qresource>
+  <qresource prefix="theme-sources">
+    <file>sources/downArror.png</file>
+  </qresource>
+</RCC>
