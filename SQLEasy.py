@@ -5,6 +5,19 @@ class SQLiteEasyException(Exception):
     pass
 
 
+def autoselectID_fromNew_item(DATABASE, TABLE, ID_KEY, start_index=0):
+    TABLE_DATA = DATABASE.getBase(TABLE)
+    TABLE_DATA = compareKey(TABLE_DATA, ID_KEY)
+    TABLE_DATA = [ID for ID in TABLE_DATA]
+    INDEX = start_index
+    for DATA_INDEX in TABLE_DATA:
+        if INDEX == DATA_INDEX:
+            INDEX += 1
+        else:
+            return INDEX
+    return INDEX
+
+
 def compareKey(DBlist, key, type_of_key=lambda x: x):
     if not(type(DBlist) is list):
         raise SQLiteEasyException(f"function compareKey need List object, unsupported type: {type(DBlist)}")
@@ -112,7 +125,7 @@ class database:
         elif DatabaseName is None:
             raise SQLiteEasyException("Database is not choosed")
         dbCursore = self.ConnectedFile.cursor()
-        if value is None:
+        if value in (None, 'NULL'):
             dbCursore.execute('UPDATE %s SET %s = %s WHERE %s is NULL;' % (DatabaseName, key, newValue, indexKey))
         else:
             dbCursore.execute('UPDATE %s SET %s = %s WHERE %s = %s;' % (DatabaseName, key, newValue, indexKey, value))
@@ -143,6 +156,7 @@ class database:
     def uploadFiles(self, binary, DatabaseName=None):  # Uwaga! Может работать с ошибками.
         if not(type(binary) is bytes or type(binary) is bytearray):
             raise SQLiteEasyException('You can upload only byte or bytearray types!!')
+            return
         dbCursore = self.ConnectedFile.cursor()
         binary = sqlite3.Binary(binary)
         

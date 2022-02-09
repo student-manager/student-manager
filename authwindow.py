@@ -146,5 +146,5 @@ class Ui_Form(object):
         self.textAge.setText(_translate("Form", self.localeData['ageTxt']))
         self.addGroup.setText(_translate("Form", "+"))
         self.applyDarkTheme.setText(_translate("Form", f"{self.localeData['activateDarkTheme']} (β)"))
-        self.label.setText(_translate("Form", "v. 1.1"))
+        self.label.setText(_translate("Form", "v. 1.1.1"))
 import source_rc

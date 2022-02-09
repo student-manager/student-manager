@@ -4,18 +4,18 @@ from PyQt5.QtWidgets import *
 from PyQt5.Qt import *
 from threading import Thread
 import urllib, sys, random, os, SQLEasy, time, json, datetime, requests, traceback, webbrowser
-import authwindow, journal, createGroup, createObject, taskInfo, editTask, LangChoose  # Интерфейсы
+import authwindow, journal, createGroup, createObject, taskInfo, editTask, LangChoose, addSbj  # Интерфейсы
 import updater
 print('Finished.')
 
-Supported_DataBaseVersion = '1.1'
-programVersion = '1.1'
+Supported_DataBaseVersion = '1.1.1'
+programVersion = '1.1.1'
 DataBase = SQLEasy.database('database.db')
 DBVersion_code = updater.checkVersion(DataBase, Supported_DataBaseVersion)
 
 localeData = {
     'langVersion_from': Supported_DataBaseVersion,
-    'systemLang': 'en_ES',
+    'systemLang': 'en_US',
     'machineTranslation': 0,
     'EnglishName': 'English',
     'LocaleName': 'English',
@@ -31,7 +31,6 @@ localeData = {
     'continue': 'Continue',
     'progamName': 'Student manager',  # Студенческий планировщик
     'journalTitle': 'Journal of',  # Журнал
-    # (!) Сделать потом
     'authTitle': 'Authorization',  # Авторизация
     'loginText': 'Login',  # Логин
     'progrUpdateTitle': 'Application update',  # Обновление программы
@@ -128,8 +127,25 @@ localeData = {
     'rewriteFormsAlert': 'Do you really want to create a profile?',  # Вы действительно хотите создать профиль?
     'openTableLog': 'Opening table',  # Открытие таблицы
     'exit': 'Exit',  # Выйти
-    'upDated_alert': 'Your data has been transferred to a new version of the Database, click "Finish", after which the program will close.'  # Ваши данные были перенесены на новую версию Базы Данных, нажмите "Завершить", после чего, программа закроется.
-}
+    'upDated_alert': 'Your data has been transferred to a new version of the Database, click "Finish", after which the program will close.',  # Ваши данные были перенесены на новую версию Базы Данных, нажмите "Завершить", после чего, программа закроется.
+    # (!) Потом добавлю
+    'upd_wizard': 'Update wizard',  # Мастер обновлений
+    'upd_setup': 'Update setup',  # Установка обновления
+    'rmApplication': 'Remove application',  # Удаление программы
+    'add_subject': 'Add subject',  # Добавить предмет
+    'upload_style': 'Upload theme',  # Загрузить стиль
+    'apply_style': 'Apply theme',  # Применить стиль
+    'remove_style': 'Remove theme',  # Удалить стиль
+    'enter_stylename': 'Enter style name',  # Введите название стиля
+    'adding_style': 'Adding a style',  # Добавление стиля
+    'style_added': 'Style added!',  # Стиль добавлен!
+    'style_removed': 'Style removed!',  # Стиль удалён!
+    'error_choiseItem': 'You should choose item!',  # Вы должны выбрать элемент!
+    'subjectRemoved': 'Lesson was been removed',  # Предмет удалён!
+    'remove_subjectConfirmation': 'Do you really want to delete an subject?',  # Вы действительно хотите удалить предмет?
+    'remove_styleConfirmation': 'Do you really want to delete an style?',  # Вы действительно хотите удалить стиль?
+    'styles_title': 'Styles'  # Стили
+}  # (!) удалить все объекты applyDarkTheme, self.darkThemeOn
 
 
 def getTimeObject(timeUNIX):
@@ -204,6 +220,14 @@ class app_win(QMainWindow):
         self.chooseLang_ui.label.setText('<html><head/><body><p align="center"><span style=" font-size:12pt;">%s</span></p></body></html>' % self.langObj['chLang'])
         self.chooseLang_ui.cont.setText(self.langObj['continue'])
     
+    def re_initStyles(self):
+        self.style_list = list()
+        self.mainmenu_ui.styleList_widget.clear()
+        for styleObj in sorted(DataBase.getBase('styles'), key=lambda obj: obj['ID']):
+            self.style_list.append(styleObj)
+            self.mainmenu_ui.styleList_widget.addItem(styleObj['Name'])
+        self.mainmenu_ui.styleList_widget.setCurrentRow(self.activeTheme)
+
     def __init__(self, app, localeData, internet):
         self.qtimer = QTimer()
         self.timer = QTimer()
@@ -218,29 +242,8 @@ class app_win(QMainWindow):
         
         # Тёмная тема, реализация
         self.darkThemeOn = bool(DataBase.getBase(DatabaseName='applicationData')[0]['activeTheme'])
-        '''
-        self.defaultTheme = QPalette()
-        
-        self.darkTheme = QPalette()
-        self.darkTheme.setColor(QPalette.Window, QColor(53, 53, 53))
-        self.darkTheme.setColor(QPalette.WindowText, Qt.white)
-        self.darkTheme.setColor(QPalette.Base, QColor(25, 25, 25))
-        self.darkTheme.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
-        self.darkTheme.setColor(QPalette.ToolTipBase, Qt.black)
-        self.darkTheme.setColor(QPalette.ToolTipText, Qt.white)
-        self.darkTheme.setColor(QPalette.Text, Qt.white)
-        self.darkTheme.setColor(QPalette.Button, QColor(53, 53, 53))
-        self.darkTheme.setColor(QPalette.ButtonText, Qt.white)
-        self.darkTheme.setColor(QPalette.BrightText, Qt.red)
-        self.darkTheme.setColor(QPalette.Link, QColor(42, 130, 218))
-        self.darkTheme.setColor(QPalette.Highlight, QColor(42, 130, 218))
-        self.darkTheme.setColor(QPalette.HighlightedText, Qt.black)
-        
-        if self.darkThemeOn:
-            self.app.setPalette(self.darkTheme)
-        '''
-        if self.darkThemeOn:
-            self.app.setStyleSheet(DataBase.getBase('styles')[1]['Style'])
+        self.activeTheme = DataBase.getBase(DatabaseName='applicationData')[0]['activeTheme']
+        self.app.setStyleSheet(DataBase.getBase('styles')[self.activeTheme]['Style'])
         # Иницилизация окна
         super(app_win, self).__init__()
         self.authwindow_ui = authwindow.Ui_Form(self.localeData)
@@ -396,8 +399,61 @@ class app_win(QMainWindow):
             len(self.createGroup_ui.direction.text()) > 0 and
             len(self.createGroup_ui.groupName.text()) >= 2
         )
-    
+
+    def init_subjects(self):
+        self.unused_lessons = list()
+        self.Objects_ui.subjectList.clear()
+        for lesson in DataBase.getBase('objects'):
+            if not(self.lesson_learning(lesson['ID'], SQLEasy.compareKey(DataBase.getBase('profiles'), 'ID')[DataBase.getBase('applicationData')[0]['activeProfile']]['GroupClass'])):
+                self.Objects_ui.subjectList.addItem(f"{lesson['objectName']} ({lesson['teacher']})")
+                self.unused_lessons.append(lesson)
+
+    def create_lessonGroups_Paths(self, subjectID):
+        if subjectID in [ID['ID'] for ID in DataBase.getBase('objects')]:
+            DataBase.add({
+                "rowID": SQLEasy.autoselectID_fromNew_item(DataBase, 'subjects_grs', 'rowID'),
+                "subjectID": subjectID,
+                "group_id": SQLEasy.compareKey(DataBase.getBase('profiles'), 'ID')[DataBase.getBase('applicationData')[0]['activeProfile']]['GroupClass']
+            }, 'subjects_grs')
+            self.Objects_w.hide()
+            self.updateInfo()
+            QMessageBox.information(self, self.localeData["successAlert"], self.localeData["subjectAdd"], QMessageBox.Ok)
+
+    def addLess(self):
+        ID = self.Objects_ui.subjectList.currentRow()
+        if ID != -1:
+            self.create_lessonGroups_Paths(self.unused_lessons[ID]['ID'])
+        else:
+            QMessageBox.critical(self, self.localeData["errorAlert"], self.localeData["error_choiseItem"], QMessageBox.Ok)
+
+    def remove_globalSubject(self):
+        ID = self.unused_lessons[self.Objects_ui.subjectList.currentRow()]['ID']
+        if ID != -1:
+            if ID in [ID['ID'] for ID in DataBase.getBase('objects')]:
+                if QMessageBox.warning(self, self.localeData['warnMesTitle'], self.localeData["remove_subjectConfirmation"], QMessageBox.Yes, QMessageBox.No) == QMessageBox.Yes:
+                    DataBase.pop('subjectID', ID, 'subjects_grs')
+                    DataBase.setItem(key='hidden', newValue=1, indexKey='object', value=ID, DatabaseName='tasks')
+                    DataBase.setItem(key='object', newValue=None, indexKey='object', value=ID, DatabaseName='tasks')
+                    DataBase.pop('ID', ID, 'objects')
+                    self.init_subjects()
+                    QMessageBox.information(self, self.localeData["successAlert"], self.localeData["subjectRemoved"], QMessageBox.Ok)
+        else:
+            QMessageBox.critical(self, self.localeData["errorAlert"], self.localeData["error_choiseItem"], QMessageBox.Ok)
+
     def createLesson(self):
+        self.Objects_w = QMainWindow()
+        super(app_win, self).__init__()
+        self.Objects_ui = addSbj.Ui_Form(self.localeData)
+        self.Objects_ui.setupUi(self.Objects_w)
+        self.Objects_w.setMouseTracking(True)
+        self.init_subjects()
+        self.Objects_w.show()
+        # Реализуем кнопки
+        self.Objects_ui.addSubject.clicked.connect(self.addLess)
+        self.Objects_ui.createSubject.clicked.connect(self.createLesson_step)
+        self.Objects_ui.rmSubject.clicked.connect(self.remove_globalSubject)
+    
+    def createLesson_step(self):
         self.createObject = QMainWindow()
         super(app_win, self).__init__()
         self.createObject_ui = createObject.Ui_Form(self.localeData)
@@ -420,10 +476,15 @@ class app_win(QMainWindow):
         }, 'objects')
         
         self.mainmenu_ui.set_lesson.clear()
+        self.subjectList = list()
         for lesson in DataBase.getBase('objects'):
-            self.mainmenu_ui.set_lesson.addItem(f"{lesson['objectName']} ({lesson['teacher']})")
+            if self.lesson_learning(lesson['ID'], SQLEasy.compareKey(DataBase.getBase('profiles'), 'ID')[DataBase.getBase('applicationData')[0]['activeProfile']]['GroupClass']):
+                self.mainmenu_ui.set_lesson.addItem(f"{lesson['objectName']} ({lesson['teacher']})")
+                self.subjectList.append(lesson)
+        self.checker.stop()
         self.createObject.hide()
         QMessageBox.information(self, self.localeData["successAlert"], self.localeData["subjectAdd"], QMessageBox.Ok)
+        self.init_subjects()
     
     def CheckCorrectDates_in_CL(self):
         self.createObject_ui.createButton.setEnabled(len(self.createObject_ui.lessonName.text()) >= 2 and len(self.createObject_ui.teacherName.text()) >= 5)
@@ -509,6 +570,8 @@ class app_win(QMainWindow):
         self.mainmenu_ui.setupUi(self.mainmenu)
         self.mainmenu.setMouseTracking(True)
         self.mainmenu.show()
+        # Прогрузим список со стилями
+        self.re_initStyles()
         # Запишем имя
         Name = SQLEasy.compareKey(DataBase.getBase('profiles'), 'ID')[DataBase.getBase('applicationData')[0]['activeProfile']]['name']
         middleName = SQLEasy.compareKey(DataBase.getBase('profiles'), 'ID')[DataBase.getBase('applicationData')[0]['activeProfile']]['middleName']
@@ -567,10 +630,8 @@ class app_win(QMainWindow):
         }}
         self.autoEnabler.timeout.connect(lambda: self.edTimer(czekam_value_func=self.check_values))
         self.autoEnabler.start(1)        
-        # Иницилизация тёмной темы
-        if self.darkThemeOn:
-            self.app.setStyleSheet(DataBase.getBase('styles')[1]['Style'])
-        self.mainmenu_ui.applyDarkTheme.setChecked(self.darkThemeOn)
+        # Иницилизация тем
+        self.app.setStyleSheet(DataBase.getBase('styles')[self.activeTheme]['Style'])
         # Обновим информацию (ref)
         self.updateInfo()
         # Применим блокировку к элементам пароля, когда пароль на аккаунте - не стоит
@@ -579,7 +640,7 @@ class app_win(QMainWindow):
         # Реализуем кнопки и клики
         self.mainmenu_ui.addLesson.clicked.connect(self.createLesson)
         self.mainmenu_ui.addTask.clicked.connect(self.addTask)
-        self.mainmenu_ui.applyDarkTheme.clicked.connect(self.editDTheme)
+        self.mainmenu_ui.apply_theme_button.clicked.connect(self.editTheme)
         self.mainmenu_ui.calendarWidget.clicked.connect(self.updateInfo)
         self.mainmenu_ui.complete.clicked.connect(self.completeTask)
         self.mainmenu_ui.notcomplete.clicked.connect(self.finalize)
@@ -592,6 +653,68 @@ class app_win(QMainWindow):
         self.mainmenu_ui.giveNull_password.clicked.connect(lambda: self.setPassword(True))
         self.mainmenu_ui.ApplySaves_protection.clicked.connect(self.setPassword)
         self.mainmenu_ui.addGroup.clicked.connect(self.create_group_fromSettings)
+        self.mainmenu_ui.addLesson_2.clicked.connect(self.removeSubject_locale)
+        self.mainmenu_ui.upl_theme_button.clicked.connect(self.upload_theme)
+        self.mainmenu_ui.rm_style_button.clicked.connect(self.removeTheme)
+
+    def removeTheme(self):
+        if self.mainmenu_ui.styleList_widget.currentRow() != -1:
+            ID = self.style_list[self.mainmenu_ui.styleList_widget.currentRow()]['ID']
+            if self.style_list[self.mainmenu_ui.styleList_widget.currentRow()]['can_remove']:
+                if QMessageBox.warning(self, self.localeData['warnMesTitle'], self.localeData["remove_styleConfirmation"], QMessageBox.Yes, QMessageBox.No) == QMessageBox.Yes:
+                    DataBase.pop(key='ID', value=ID, DatabaseName='styles')
+                    self.re_initStyles()
+                    QMessageBox.information(self, self.localeData["successAlert"], self.localeData["style_removed"], QMessageBox.Ok)
+
+    def qinput(self, text, title='Ввод', password=False):
+        if password:
+            text, ok = QInputDialog.getText(self, title, text, QLineEdit.Password)
+        else:
+            text, ok = QInputDialog.getText(self, title, text)
+        if ok:
+            return text
+        else:
+            raise Exception('No qinput given')
+
+    def upload_theme(self):
+        file, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose file', './', 'styles (*.qss)')
+        if file:
+            try:
+                styleName = self.qinput(self.localeData['enter_stylename'], self.localeData['adding_style'])
+                styleFile = open(file, 'r', encoding='utf-8')
+                styleContent = styleFile.read()
+                styleFile.close()
+                del styleFile
+
+                DataBase.add({
+                    "ID": SQLEasy.autoselectID_fromNew_item(DataBase, 'styles', 'ID'),
+                    "Name": styleName,
+                    "Style": styleContent,
+                    "can_remove": 1
+                }, 'styles')
+                QMessageBox.information(self, self.localeData["successAlert"], self.localeData["style_added"], QMessageBox.Ok)
+                self.re_initStyles()
+            except Exception as exc:
+                if 'No qinput given' in str(exc):
+                    pass
+
+    def removeSubject_locale(self):
+        if self.mainmenu_ui.set_lesson.currentIndex() != -1:
+            subjectID = self.subjectList[self.mainmenu_ui.set_lesson.currentIndex()]['ID']
+            if QMessageBox.warning(self, self.localeData['warnMesTitle'], self.localeData["remove_subjectConfirmation"], QMessageBox.Yes, QMessageBox.No) == QMessageBox.Yes:
+                rmIds = list()
+                for row in DataBase.getBase('subjects_grs'):
+                    if row['subjectID'] == subjectID and row['group_id'] == SQLEasy.compareKey(DataBase.getBase('profiles'), 'ID')[DataBase.getBase('applicationData')[0]['activeProfile']]['GroupClass']:
+                        rmIds.append(row['rowID'])
+                for rmId in rmIds:
+                    DataBase.pop(key='rowID', value=rmId, DatabaseName='subjects_grs')
+                self.updateInfo()
+                QMessageBox.information(self, self.localeData["successAlert"], self.localeData["subjectRemoved"], QMessageBox.Ok)
+    
+    def editTheme(self):
+        self.activeTheme = self.mainmenu_ui.styleList_widget.currentRow()
+        self.app.setStyleSheet(DataBase.getBase('styles')[self.activeTheme]['Style'])
+        DataBase.setItem(key='activeTheme', newValue=self.activeTheme, indexKey='Num', value=1, DatabaseName='applicationData')
     
     def create_group_fromSettings(self):
         self.createGroup = QMainWindow()
@@ -668,6 +791,12 @@ class app_win(QMainWindow):
     def edTimer(self, czekam_value_func):
         self.mainmenu_ui.ApplySaves_def.setEnabled(czekam_value_func()['persona'] != self.true_values['persona'])
         self.mainmenu_ui.ApplySaves_group.setEnabled(czekam_value_func()['groups'] != self.true_values['groups'])
+        self.mainmenu_ui.apply_theme_button.setEnabled(self.mainmenu_ui.styleList_widget.currentRow() != -1)
+
+        if self.mainmenu_ui.styleList_widget.currentRow() != -1:
+            self.mainmenu_ui.rm_style_button.setEnabled(self.style_list[self.mainmenu_ui.styleList_widget.currentRow()]['can_remove'])
+        else:
+            self.mainmenu_ui.rm_style_button.setEnabled(False)
         
         if self.mainmenu_ui.Login.text() != getCorret_login(self.mainmenu_ui.Login.text()):
             self.mainmenu_ui.Login.setText(getCorret_login(self.mainmenu_ui.Login.text()))
@@ -794,7 +923,7 @@ class app_win(QMainWindow):
     
     def finalize(self):
         if self.mainmenu_ui.completeTasks.currentRow() != -1:
-            DataBase.setItem(DatabaseName='tasks', indexKey='ID', value=self.TaskList['complete'][self.mainmenu_ui.tasks.currentRow()]['ID'], key='is_complete', newValue=0)
+            DataBase.setItem(DatabaseName='tasks', indexKey='ID', value=self.TaskList['complete'][self.mainmenu_ui.completeTasks.currentRow()]['ID'], key='is_complete', newValue=0)
         self.updateInfo()
     
     def viewInformation_aboutTask(self):
@@ -948,7 +1077,7 @@ class app_win(QMainWindow):
     def addTask(self):
         data = {
             'ID': len(DataBase.getBase('tasks')),
-            'object': self.mainmenu_ui.set_lesson.currentIndex(),
+            'object': self.subjectList[self.mainmenu_ui.set_lesson.currentIndex()]['ID'],
             'description': self.mainmenu_ui.taskDescription.toPlainText(),
             'deadline': int(datetime.datetime.strptime(self.mainmenu_ui.deadline.date().toString("dd.MM.yyyy"), '%d.%m.%Y').timestamp()),
             'view_in_journal': int(datetime.datetime.strptime(self.mainmenu_ui.push_in.date().toString("dd.MM.yyyy"), '%d.%m.%Y').timestamp()),
@@ -966,11 +1095,21 @@ class app_win(QMainWindow):
         # Обновим информацию (ref)
         self.updateInfo()
         QMessageBox.information(self, self.localeData["successAlert"], self.localeData["taskAdd"], QMessageBox.Ok)
+
+    def lesson_learning(self, subjectID, group_id):
+        for subject_info in DataBase.getBase('subjects_grs'):
+            if subject_info['group_id'] == group_id and subject_info['subjectID'] == subjectID:
+                return True
+        return False
     
     def updateInfo(self):
         self.mainmenu_ui.set_lesson.clear()
+
+        self.subjectList = list()
         for lesson in DataBase.getBase('objects'):
-            self.mainmenu_ui.set_lesson.addItem(f"{lesson['objectName']} ({lesson['teacher']})")
+            if self.lesson_learning(lesson['ID'], SQLEasy.compareKey(DataBase.getBase('profiles'), 'ID')[DataBase.getBase('applicationData')[0]['activeProfile']]['GroupClass']):
+                self.mainmenu_ui.set_lesson.addItem(f"{lesson['objectName']} ({lesson['teacher']})")
+                self.subjectList.append(lesson)
         self.TaskList = {
             'active': list(),
             'complete': list()
@@ -991,7 +1130,6 @@ class app_win(QMainWindow):
                     lesson = SQLEasy.compareKey(DataBase.getBase('objects'), 'ID')[task['object']]['objectName']
                     task_content = task['description']
                     self.mainmenu_ui.tasks.addItem(f"{lesson}:\n{task_content}")
-        
         if len(self.mainmenu_ui.completeTasks) == 0:
             self.mainmenu_ui.progressBar.setValue(0)
         else:
